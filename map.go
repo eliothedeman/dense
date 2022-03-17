@@ -4,6 +4,8 @@ import (
 	"hash/maphash"
 	"log"
 	"math/big"
+
+	"golang.org/x/exp/constraints"
 )
 
 type pair[K, V any] struct {
@@ -25,7 +27,36 @@ func NewMap[K comparable, V any](size int) *Map[K, V] {
 		isSet:  big.Int{},
 	}
 	s.hasher.Reset()
+	s.grow()
 	return s
+}
+
+func min[T constraints.Ordered](a T, b T) T {
+	if a < b {
+		return a
+
+	}
+	return b
+}
+
+func max[T constraints.Ordered](a T, b T) T {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func (m *Map[K, V]) grow() {
+	oldD := m.data
+	oldI := m.isSet
+	m.data = make([]pair[K, V], max(len(m.data)*2, 2))
+	m.isSet.SetInt64(0)
+	for i := range oldD {
+		kv := &m.data[i]
+		if oldI.Bit(i) == 1 {
+			m.Insert(kv.key, kv.val)
+		}
+	}
 }
 
 func (m *Map[K, V]) Insert(key K, val V) {
@@ -48,13 +79,8 @@ func (m *Map[K, V]) Insert(key K, val V) {
 	}
 
 	if !foundSlot {
-		next := NewMap[K, V](len(m.data) * 2)
-		next.Insert(key, val)
-		for i := range m.data {
-			kv := &m.data[i]
-			next.Insert(kv.key, kv.val)
-		}
-		*m = *next
+		m.grow()
+		m.Insert(key, val)
 	}
 }
 
