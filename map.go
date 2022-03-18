@@ -1,11 +1,8 @@
 package dense
 
 import (
-	"hash/maphash"
 	"log"
-	"math/big"
 
-	"github.com/eliothedeman/fn"
 	"golang.org/x/exp/constraints"
 )
 
@@ -15,23 +12,25 @@ type Pair[K, V any] struct {
 }
 
 type Map[K comparable, V any] struct {
-	hasher      maphash.Hash
-	data        []Pair[K, V]
-	isSet       big.Int
-	numElements int
+	lookup map[K]uint32
+	data   []V
+}
+
+func (m *Map[K, V]) ensureInit() {
+	if len(m.data) == 0 {
+		m.data = make([]V, 2)
+	}
+	if m.data == nil {
+		m.lookup = make(map[K]uint32, len(m.data))
+	}
 }
 
 func NewMap[K comparable, V any](size int) *Map[K, V] {
-	s := &Map[K, V]{
-		hasher: maphash.Hash{},
-		data:   make([]Pair[K, V], size),
-		isSet:  big.Int{},
+	m := &Map[K, V]{
+		data:   make([]V, max(size, 2)),
+		lookup: make(map[K]uint32, max(size, 2)),
 	}
-	s.hasher.Reset()
-	if size == 0 {
-		s.grow()
-	}
-	return s
+	return m
 }
 
 func min[T constraints.Ordered](a T, b T) T {
@@ -49,58 +48,21 @@ func max[T constraints.Ordered](a T, b T) T {
 	return b
 }
 
-func (m *Map[K, V]) grow() {
-	oldD := m.data
-	oldI := m.isSet
-	m.data = make([]Pair[K, V], max(len(m.data)*2, 2))
-	m.isSet.SetInt64(0)
-	for i := range oldD {
-		kv := &m.data[i]
-		if oldI.Bit(i) == 1 {
-			m.Insert(kv.Key, kv.Val)
-		}
-	}
-}
-
 func (m *Map[K, V]) Insert(key K, val V) {
-	m.numElements += 1
-	h := hashT(&m.hasher, key)
-	l := uint64(len(m.data))
-	mod := h % l
-	foundSlot := false
-	for i := mod; i < l; i++ {
-		if m.isSet.Bit(int(i)) == 0 {
-			m.isSet.SetBit(&m.isSet, int(i), 1)
-			foundSlot = true
-			m.data[i] = Pair[K, V]{key, val}
-			return
-		}
-		// already in the map
-		if m.data[i].Key == key {
-			return
-		}
-	}
-
-	if !foundSlot {
-		m.grow()
-		m.Insert(key, val)
-	}
+	m.ensureInit()
+	l := len(m.data)
+	m.data = append(m.data, val)
+	m.lookup[key] = uint32(l)
 }
 
 func (m *Map[K, V]) find(key K) int {
-	h := hashT(&m.hasher, key)
-	l := uint64(len(m.data))
-	mod := h % l
-	for i := mod; i < l; i++ {
-		if m.isSet.Bit(int(i)) == 1 {
-			if m.data[i].Key == key {
-				return int(i)
-			}
-		} else {
-			break
-		}
+	m.ensureInit()
+	idx, ok := m.lookup[key]
+	if !ok {
+		return -1
 	}
-	return -1
+
+	return int(idx)
 }
 
 func (m *Map[K, V]) Get(key K) (val V, hasval bool) {
@@ -108,7 +70,7 @@ func (m *Map[K, V]) Get(key K) (val V, hasval bool) {
 	if idx < 0 {
 		return
 	}
-	val = m.data[idx].Val
+	val = m.data[idx]
 	hasval = true
 	return
 }
@@ -119,7 +81,7 @@ func (m *Map[K, V]) GetRef(key K) (val *V, hasval bool) {
 	if idx < 0 {
 		return
 	}
-	val = &m.data[idx].Val
+	val = &m.data[idx]
 	hasval = true
 	return
 }
@@ -144,40 +106,32 @@ func (m *Map[K, V]) Contains(key K) bool {
 }
 
 func (m *Map[K, V]) Len() int {
-	return m.numElements
+	return len(m.lookup)
 }
 
-func (m *Map[K, V]) Iter() *fn.Iter[Pair[K, V]] {
-	i := 0
-	return fn.NewIter(func() (out fn.Option[Pair[K, V]]) {
-		l := len(m.data)
-		if i >= l {
-			return fn.None[Pair[K, V]]()
-		}
-		for i < l {
-			if m.isSet.Bit(i) == 1 {
-				out = fn.Some(m.data[i])
-				i++
-				return
-			}
-			i++
-		}
-		return fn.None[Pair[K, V]]()
-	})
+func (m *Map[K, V]) Each(f func(key K, val V)) {
+	for k, v := range m.lookup {
+		f(k, m.data[v])
+	}
+}
+
+func (m *Map[K, V]) EachRef(f func(key K, valRef *V)) {
+	for k, v := range m.lookup {
+		f(k, &m.data[v])
+	}
 }
 
 func (m *Map[K, V]) Clear() {
-	m.isSet.SetInt64(0)
+	m.lookup = nil
+	m.ensureInit()
 }
 
 func (m *Map[K, V]) Delete(k K) {
-	idx := m.find(k)
-	// not in the map
-	if idx < 0 {
+	old, ok := m.lookup[k]
+	if !ok {
 		return
 	}
+	delete(m.lookup, k)
 	var blankV V
-	var blankK K
-	m.data[idx] = Pair[K, V]{blankK, blankV}
-	m.isSet.SetBit(&m.isSet, idx, 0)
+	m.data[old] = blankV
 }

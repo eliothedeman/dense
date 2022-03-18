@@ -41,29 +41,15 @@ func BenchmarkMapInsert(b *testing.B) {
 }
 
 func TestIterMap(t *testing.T) {
-	m := NewMap[int, int](10000)
+	m := NewMap[int, int](0)
 	for i := 0; i < 1000; i++ {
 		m.Insert(i, i)
 	}
-	it := m.Iter()
 	called := 0
-	for it.Next() {
-		called++
-		it.Val()
-	}
-	assert.Equal(t, 1000, called)
-}
+	m.Each(func(key, val int) {
 
-func TestIterSet(t *testing.T) {
-	m := NewSet[int](10000)
-	for i := 0; i < 1000; i++ {
-		m.Insert(i)
-	}
-	it := m.Iter()
-	called := 0
-	for it.Next() {
 		called++
-		it.Val()
-	}
+		assert.Equal(t, m.MustGet(key), val)
+	})
 	assert.Equal(t, 1000, called)
 }
