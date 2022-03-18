@@ -45,3 +45,11 @@ func (s *Set[T]) Iter() *fn.Iter[T] {
 		return t.Key
 	})
 }
+
+func (s *Set[T]) Clear() {
+	s.m.Clear()
+}
+
+func (s *Set[T]) Delete(k T) {
+	s.m.Delete(k)
+}

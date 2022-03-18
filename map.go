@@ -87,91 +87,60 @@ func (m *Map[K, V]) Insert(key K, val V) {
 	}
 }
 
-func (m *Map[K, V]) Get(key K) (val V, hasval bool) {
-
+func (m *Map[K, V]) find(key K) int {
 	h := hashT(&m.hasher, key)
 	l := uint64(len(m.data))
 	mod := h % l
 	for i := mod; i < l; i++ {
 		if m.isSet.Bit(int(i)) == 1 {
 			if m.data[i].Key == key {
-				return m.data[i].Val, true
+				return int(i)
 			}
 		} else {
 			break
 		}
 	}
+	return -1
+}
+
+func (m *Map[K, V]) Get(key K) (val V, hasval bool) {
+	idx := m.find(key)
+	if idx < 0 {
+		return
+	}
+	val = m.data[idx].Val
+	hasval = true
 	return
 }
 
 func (m *Map[K, V]) GetRef(key K) (val *V, hasval bool) {
 
-	h := hashT(&m.hasher, key)
-	l := uint64(len(m.data))
-	mod := h % l
-	for i := mod; i < l; i++ {
-		if m.isSet.Bit(int(i)) == 1 {
-			if m.data[i].Key == key {
-				return &m.data[i].Val, true
-			}
-		} else {
-			break
-		}
+	idx := m.find(key)
+	if idx < 0 {
+		return
 	}
+	val = &m.data[idx].Val
+	hasval = true
 	return
 }
 
 func (m *Map[K, V]) MustGet(key K) (out V) {
-
-	h := hashT(&m.hasher, key)
-	l := uint64(len(m.data))
-	mod := h % l
-	for i := mod; i < l; i++ {
-		if m.isSet.Bit(int(i)) == 1 {
-			if m.data[i].Key == key {
-				out = m.data[i].Val
-				return
-			}
-		} else {
-			break
-		}
-	}
-	log.Panicf("%v not in map[%p]", key, m)
+	out = *m.MustGetRef(key)
 	return
 }
 func (m *Map[K, V]) MustGetRef(key K) (out *V) {
 
-	h := hashT(&m.hasher, key)
-	l := uint64(len(m.data))
-	mod := h % l
-	for i := mod; i < l; i++ {
-		if m.isSet.Bit(int(i)) == 1 {
-			if m.data[i].Key == key {
-				out = &m.data[i].Val
-				return
-			}
-		} else {
-			break
-		}
+	var hasVal bool
+	out, hasVal = m.GetRef()
+	if hasVal {
+		return
 	}
 	log.Panicf("%v not in map[%p]", key, m)
 	return
 }
 
 func (m *Map[K, V]) Contains(key K) bool {
-	h := hashT(&m.hasher, key)
-	l := uint64(len(m.data))
-	mod := h % l
-	for i := mod; i < l; i++ {
-		if m.isSet.Bit(int(i)) == 1 {
-			if m.data[i].Key == key {
-				return true
-			}
-		} else {
-			break
-		}
-	}
-	return false
+	return m.find(key) >= 0
 }
 
 func (m *Map[K, V]) Len() int {
@@ -195,4 +164,20 @@ func (m *Map[K, V]) Iter() *fn.Iter[Pair[K, V]] {
 		}
 		return fn.None[Pair[K, V]]()
 	})
+}
+
+func (m *Map[K, V]) Clear() {
+	m.isSet.SetInt64(0)
+}
+
+func (m *Map[K, V]) Delete(k K) {
+	idx := m.find(k)
+	// not in the map
+	if idx < 0 {
+		return
+	}
+	var blankV V
+	var blankK K
+	m.data[idx] = Pair[K, V]{blankK, blankV}
+	m.isSet.SetBit(&m.isSet, idx, 0)
 }
