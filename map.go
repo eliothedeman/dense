@@ -131,7 +131,7 @@ func (m *Map[K, V]) MustGet(key K) (out V) {
 func (m *Map[K, V]) MustGetRef(key K) (out *V) {
 
 	var hasVal bool
-	out, hasVal = m.GetRef()
+	out, hasVal = m.GetRef(key)
 	if hasVal {
 		return
 	}
