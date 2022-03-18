@@ -20,6 +20,10 @@ func NewSet[T comparable](size int) *Set[T] {
 		isSet:  big.Int{},
 	}}
 	s.m.hasher.Reset()
+	if size == 0 {
+		s.m.grow()
+
+	}
 
 	return s
 }

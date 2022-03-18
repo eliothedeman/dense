@@ -53,3 +53,17 @@ func TestIterMap(t *testing.T) {
 	}
 	assert.Equal(t, 1000, called)
 }
+
+func TestIterSet(t *testing.T) {
+	m := NewSet[int](10000)
+	for i := 0; i < 1000; i++ {
+		m.Insert(i)
+	}
+	it := m.Iter()
+	called := 0
+	for it.Next() {
+		called++
+		it.Val()
+	}
+	assert.Equal(t, 1000, called)
+}
