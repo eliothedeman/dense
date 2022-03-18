@@ -28,7 +28,9 @@ func NewMap[K comparable, V any](size int) *Map[K, V] {
 		isSet:  big.Int{},
 	}
 	s.hasher.Reset()
-	s.grow()
+	if size == 0 {
+		s.grow()
+	}
 	return s
 }
 
@@ -179,16 +181,18 @@ func (m *Map[K, V]) Len() int {
 func (m *Map[K, V]) Iter() *fn.Iter[Pair[K, V]] {
 	i := 0
 	return fn.NewIter(func() (out fn.Option[Pair[K, V]]) {
-		hasNext := false
-		for m.isSet.Bit(i) != 1 && i <= len(m.data) {
-			hasNext = true
-			i++
-		}
-		if !hasNext {
+		l := len(m.data)
+		if i >= l {
 			return fn.None[Pair[K, V]]()
 		}
-		out = fn.Some(m.data[i])
-		i++
-		return
+		for i < l {
+			if m.isSet.Bit(i) == 1 {
+				out = fn.Some(m.data[i])
+				i++
+				return
+			}
+			i++
+		}
+		return fn.None[Pair[K, V]]()
 	})
 }

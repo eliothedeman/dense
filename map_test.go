@@ -1,6 +1,10 @@
 package dense
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func BenchmarkMapInsert(b *testing.B) {
 
@@ -34,5 +38,18 @@ func BenchmarkMapInsert(b *testing.B) {
 		}
 
 	})
+}
 
+func TestIterMap(t *testing.T) {
+	m := NewMap[int, int](10000)
+	for i := 0; i < 1000; i++ {
+		m.Insert(i, i)
+	}
+	it := m.Iter()
+	called := 0
+	for it.Next() {
+		called++
+		it.Val()
+	}
+	assert.Equal(t, 1000, called)
 }
