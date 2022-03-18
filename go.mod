@@ -3,6 +3,7 @@ module github.com/eliothedeman/dense
 go 1.18
 
 require (
+	github.com/eliothedeman/fn v0.1.5
 	github.com/stretchr/testify v1.7.1
 	golang.org/x/exp v0.0.0-20220317015231-48e79f11773a
 )
