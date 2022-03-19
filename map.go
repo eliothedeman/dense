@@ -20,7 +20,7 @@ func (m *Map[K, V]) ensureInit() {
 	if len(m.data) == 0 {
 		m.data = make([]V, 2)
 	}
-	if m.data == nil {
+	if m.lookup == nil {
 		m.lookup = make(map[K]uint32, len(m.data))
 	}
 }
