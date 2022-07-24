@@ -15,6 +15,7 @@ func BenchmarkInsert(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			fmt.Fprint(&buff, i)
 			x.Insert(buff.Bytes(), i)
+			buff.Reset()
 		}
 	})
 	b.Run("hash", func(b *testing.B) {
@@ -22,6 +23,7 @@ func BenchmarkInsert(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			fmt.Fprint(&buff, i)
 			x[buff.String()] = i
+			buff.Reset()
 		}
 	})
 }
@@ -69,63 +71,19 @@ func Test_bitsAtDepth(t *testing.T) {
 			},
 			0b01,
 		},
+		{
+			"16",
+			args{
+				[]byte{0b10000},
+				2,
+			},
+			0b01,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := bitsAtDepth(tt.args.data, tt.args.depth); got != tt.want {
 				t.Errorf("bitsAtDepth() = %b, want %b", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_maskAndShiftAtDepth(t *testing.T) {
-	type args struct {
-		depth id
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want  byte
-		want1 byte
-	}{
-		{
-			"zero",
-			args{
-				0,
-			},
-			nodeMaskEven, 0,
-		},
-		{
-			"odd",
-			args{
-				1,
-			},
-			nodeMaskOdd, 2,
-		},
-		{
-			"high Odd",
-			args{
-				201,
-			},
-			nodeMaskOdd, 2,
-		},
-		{
-			"high even",
-			args{
-				300,
-			},
-			nodeMaskEven, 0,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := maskAndShiftAtDepth(tt.args.depth)
-			if got != tt.want {
-				t.Errorf("maskAndShiftAtDepth() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("maskAndShiftAtDepth() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}

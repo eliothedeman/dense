@@ -6,13 +6,20 @@ const nodeMaskEven = 0b0011
 const nodeMaskOdd = 0b1100
 const oddBit = 0b1
 const nodeBitWidth = 2
+const partsPerByte = 8 / nodeBitWidth
 const nodeChildWidth = 1 << nodeBitWidth
 const rootNode = 0
 
-type id = uint16
+type id = uint32
+
+const (
+	hasValue = 1 << iota
+	deleted
+)
 
 type tnode[T any] struct {
 	value    T
+	flags    uint8
 	children [nodeChildWidth]id
 }
 
@@ -39,24 +46,35 @@ func NewTrie[T any]() *Trie[T] {
 	}
 }
 
+func (t *Trie[T]) ForEach(f func([]byte, T)) {
+
+}
+
 func (t *Trie[T]) Insert(key []byte, val T) {
-	parts := id(len(key) * 2)
+	parts := id(len(key) * partsPerByte)
 	currentNodeId := id(rootNode)
 	for i := id(0); i < parts; i++ {
 		currentNode := &t.nodes[currentNodeId]
 		childIndex := bitsAtDepth(key, i)
 		nextChild := currentNode.children[childIndex]
 		if nextChild == 0 {
-			currentNodeId = t.addNode(currentNodeId, uint16(childIndex))
+			currentNodeId = t.addNode(currentNodeId, id(childIndex))
 			continue
 		}
 		currentNodeId = nextChild
 	}
-	t.nodes[currentNodeId].value = val
+	n := &t.nodes[currentNodeId]
+
+	if n.flags&hasValue > 0 {
+		log.Fatalf("Overwriting %v with %v at key %s", n.value, val, key)
+	}
+
+	n.value = val
+	n.flags |= hasValue
 }
 
 func (t *Trie[T]) MustGet(key []byte) (val T) {
-	parts := id(len(key) * 2)
+	parts := id(len(key) * partsPerByte)
 	currentNodeId := id(rootNode)
 	for i := id(0); i < parts; i++ {
 		currentNode := &t.nodes[currentNodeId]
@@ -72,7 +90,7 @@ func (t *Trie[T]) MustGet(key []byte) (val T) {
 }
 
 func (t *Trie[T]) Get(key []byte) (val T, found bool) {
-	parts := id(len(key) * 2)
+	parts := id(len(key) * partsPerByte)
 	currentNodeId := id(rootNode)
 	for i := id(0); i < parts; i++ {
 		currentNode := &t.nodes[currentNodeId]
@@ -89,15 +107,9 @@ func (t *Trie[T]) Get(key []byte) (val T, found bool) {
 
 // helpers
 
-func maskAndShiftAtDepth(depth id) (byte, byte) {
-	x := depth & oddBit
-	y := nodeMaskEven << x
-	y = y << x
-	return byte(y), byte(x << x)
-}
-
 func bitsAtDepth(data []byte, depth id) byte {
-	mask, shift := maskAndShiftAtDepth(depth)
-	depth = depth >> 1
+	shift := byte(depth&0b11) * nodeBitWidth
+	mask := byte(0b11 << shift)
+	depth = depth >> nodeBitWidth
 	return (data[depth] & mask) >> shift
 }
