@@ -2,15 +2,16 @@ package dense
 
 import "log"
 
-const nodeMaskEven = 0b0011
-const nodeMaskOdd = 0b1100
-const oddBit = 0b1
+const all1Byte = 0b11111111
 const nodeBitWidth = 2
 const partsPerByte = 8 / nodeBitWidth
 const nodeChildWidth = 1 << nodeBitWidth
+const readMask = all1Byte >> (8 - nodeBitWidth)
 const rootNode = 0
 
-type id = uint32
+// cost = (sizeof(id) * nodeChildWdith) * unique_key_bytes * parts_per_key
+
+type id = uint16
 
 const (
 	hasValue = 1 << iota
@@ -18,9 +19,9 @@ const (
 )
 
 type tnode[T any] struct {
-	value    T
-	flags    uint8
 	children [nodeChildWidth]id
+	flags    uint8
+	value    T
 }
 
 type Trie[T any] struct {
@@ -37,6 +38,8 @@ func (t *Trie[T]) addNode(from id, index id) id {
 }
 
 // public
+
+type Option[T any] func(t *Trie[T]) *Trie[T]
 
 func NewTrie[T any]() *Trie[T] {
 	return &Trie[T]{
@@ -57,6 +60,7 @@ func (t *Trie[T]) Insert(key []byte, val T) {
 		currentNode := &t.nodes[currentNodeId]
 		childIndex := bitsAtDepth(key, i)
 		nextChild := currentNode.children[childIndex]
+		// log.Printf("%b %b", key, childIndex)
 		if nextChild == 0 {
 			currentNodeId = t.addNode(currentNodeId, id(childIndex))
 			continue
@@ -108,8 +112,8 @@ func (t *Trie[T]) Get(key []byte) (val T, found bool) {
 // helpers
 
 func bitsAtDepth(data []byte, depth id) byte {
-	shift := byte(depth&0b11) * nodeBitWidth
-	mask := byte(0b11 << shift)
-	depth = depth >> nodeBitWidth
-	return (data[depth] & mask) >> shift
+	index := depth / partsPerByte
+	shift := nodeBitWidth * (depth % partsPerByte)
+	mask := byte(readMask << shift)
+	return (data[index] & mask) >> shift
 }
