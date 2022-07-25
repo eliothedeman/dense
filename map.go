@@ -33,14 +33,6 @@ func NewMap[K comparable, V any](size int) *Map[K, V] {
 	return m
 }
 
-func min[T constraints.Ordered](a T, b T) T {
-	if a < b {
-		return a
-
-	}
-	return b
-}
-
 func max[T constraints.Ordered](a T, b T) T {
 	if a > b {
 		return a

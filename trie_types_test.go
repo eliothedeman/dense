@@ -46,7 +46,7 @@ func BenchmarkGetInt(b *testing.B) {
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			assert.Equal(b, i, x.MustGet(i))
+			_ = x.MustGet(i)
 		}
 	})
 	b.Run("hash", func(b *testing.B) {
@@ -56,7 +56,7 @@ func BenchmarkGetInt(b *testing.B) {
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			assert.Equal(b, i, x[i])
+			_ = x[i]
 		}
 	})
 }

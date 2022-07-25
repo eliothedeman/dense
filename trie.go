@@ -11,7 +11,7 @@ const rootNode = 0
 
 // cost = (sizeof(id) * nodeChildWdith) * unique_key_bytes * parts_per_key
 
-type id = uint16
+type id = uint32
 
 const (
 	hasValue = 1 << iota
@@ -70,7 +70,7 @@ func (t *Trie[T]) Insert(key []byte, val T) {
 	n := &t.nodes[currentNodeId]
 
 	if n.flags&hasValue > 0 {
-		log.Fatalf("Overwriting %v with %v at key %s", n.value, val, key)
+		log.Fatalf("Overwriting %v with %v at key '%b'", n.value, val, key)
 	}
 
 	n.value = val

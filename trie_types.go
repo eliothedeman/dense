@@ -1,7 +1,6 @@
 package dense
 
 import (
-	"reflect"
 	"unsafe"
 
 	"golang.org/x/exp/constraints"
@@ -25,9 +24,12 @@ func NewNumericTrie[K NumericKey, V any]() *NumericTrie[K, V] {
 func (n *NumericTrie[K, V]) bytesFromKey(key K) []byte {
 	size := int(unsafe.Sizeof(key))
 	buff := n.keyBuff[:size]
-	ptr := unsafe.Pointer(&key)
-	header := reflect.SliceHeader{Data: uintptr(ptr), Len: size, Cap: size}
-	copy(buff, *(*[]byte)(unsafe.Pointer(&header)))
+
+	raw := unsafe.Slice((*byte)(unsafe.Pointer(&key)), size)
+	size--
+	for i := range buff {
+		buff[i] = raw[size-i]
+	}
 	return buff
 }
 
