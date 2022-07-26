@@ -1,6 +1,9 @@
 package dense
 
-import "log"
+import (
+	"log"
+	"unsafe"
+)
 
 const all1Byte = 0b11111111
 const nodeBitWidth = 2
@@ -13,6 +16,16 @@ const rootNode = 0
 
 type id = uint32
 
+func init() {
+	switch nodeBitWidth {
+	case 1, 2, 4, 8:
+
+	default:
+		log.Panicf("nodeBitWidth must be a power of 2 between 1 and 8")
+
+	}
+}
+
 const (
 	hasValue = 1 << iota
 	deleted
@@ -24,17 +37,46 @@ type tnode[T any] struct {
 	value    T
 }
 
+func (t *tnode[T]) hasValue() bool {
+	return t.flags&hasValue > 0
+}
+
 type Trie[T any] struct {
 	nodes []tnode[T]
 }
 
 // private
 
-func (t *Trie[T]) addNode(from id, index id) id {
-	next := id(len(t.nodes))
+func (t *Trie[T]) addNode(from int, index id) id {
+	next := len(t.nodes)
 	t.nodes = append(t.nodes, tnode[T]{})
-	t.nodes[from].children[index] = next
-	return next
+	offset := id(next - int(from))
+	t.nodes[from].children[index] = offset
+	return offset
+}
+
+type visitor[T any] func(parent id, n *tnode[T]) bool
+
+func (t *Trie[T]) dfsNodes(f visitor[T]) bool {
+	stack := stack[pair[id, id]]{}
+	for _, c := range t.nodes[rootNode].children {
+		if c != 0 {
+			stack.push(pair[id, id]{rootNode, c})
+		}
+	}
+	for stack.len() > 0 {
+		args := stack.pop()
+		n := &t.nodes[args.b]
+		if !f(args.a, n) {
+			return false
+		}
+		for _, c := range n.children {
+			if c != 0 {
+				stack.push(pair[id, id]{args.b, c})
+			}
+		}
+	}
+	return true
 }
 
 // public
@@ -42,32 +84,42 @@ func (t *Trie[T]) addNode(from id, index id) id {
 type Option[T any] func(t *Trie[T]) *Trie[T]
 
 func NewTrie[T any]() *Trie[T] {
-	return &Trie[T]{
-		nodes: []tnode[T]{
-			{},
-		},
-	}
+	t := &Trie[T]{}
+	t.nodes = make([]tnode[T], 0, 1024)
+	t.nodes = append(t.nodes, tnode[T]{})
+	return t
 }
 
 func (t *Trie[T]) ForEach(f func([]byte, T)) {
+	// buff := make([]byte, 1024)
+}
 
+func (t *Trie[T]) sizeBytes() int {
+	return int(unsafe.Sizeof(t.nodes[rootNode])) * len(t.nodes)
+}
+
+func (t *Trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
+	currentNode := &t.nodes[from]
+	childIndex := bitsAtDepth(key, depth)
+	offset := currentNode.children[childIndex]
+	if offset == 0 {
+		return -1, childIndex
+	}
+	return from + int(offset), childIndex
 }
 
 func (t *Trie[T]) Insert(key []byte, val T) {
 	parts := id(len(key) * partsPerByte)
-	currentNodeId := id(rootNode)
+	index := rootNode
 	for i := id(0); i < parts; i++ {
-		currentNode := &t.nodes[currentNodeId]
-		childIndex := bitsAtDepth(key, i)
-		nextChild := currentNode.children[childIndex]
-		// log.Printf("%b %b", key, childIndex)
-		if nextChild == 0 {
-			currentNodeId = t.addNode(currentNodeId, id(childIndex))
+		tmp, childIndex := t.findNextPart(index, key, i)
+		if tmp < 1 {
+			index += int(t.addNode(index, id(childIndex)))
 			continue
 		}
-		currentNodeId = nextChild
+		index = tmp
 	}
-	n := &t.nodes[currentNodeId]
+	n := &t.nodes[index]
 
 	if n.flags&hasValue > 0 {
 		log.Fatalf("Overwriting %v with %v at key '%b'", n.value, val, key)
@@ -79,33 +131,30 @@ func (t *Trie[T]) Insert(key []byte, val T) {
 
 func (t *Trie[T]) MustGet(key []byte) (val T) {
 	parts := id(len(key) * partsPerByte)
-	currentNodeId := id(rootNode)
+	index := rootNode
 	for i := id(0); i < parts; i++ {
-		currentNode := &t.nodes[currentNodeId]
-		childIndex := bitsAtDepth(key, i)
-		nextChild := currentNode.children[childIndex]
-		if nextChild == 0 {
+		index, _ = t.findNextPart(index, key, i)
+		if index < 1 {
 			log.Panicf("key not found %s", key)
 		}
-		currentNodeId = nextChild
+
 	}
-	val = t.nodes[currentNodeId].value
+	val = t.nodes[index].value
 	return
 }
 
 func (t *Trie[T]) Get(key []byte) (val T, found bool) {
 	parts := id(len(key) * partsPerByte)
-	currentNodeId := id(rootNode)
+	index := rootNode
 	for i := id(0); i < parts; i++ {
-		currentNode := &t.nodes[currentNodeId]
-		childIndex := bitsAtDepth(key, i)
-		nextChild := currentNode.children[childIndex]
-		if nextChild == 0 {
+		index, _ = t.findNextPart(index, key, i)
+		if index < 1 {
 			return
 		}
-		currentNodeId = nextChild
+
 	}
-	val = t.nodes[currentNodeId].value
+	val = t.nodes[index].value
+	found = true
 	return
 }
 

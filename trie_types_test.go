@@ -30,6 +30,7 @@ func BenchmarkInsertInt(b *testing.B) {
 			x.Insert(i, i)
 		}
 	})
+
 	b.Run("hash", func(b *testing.B) {
 		x := make(map[int]int)
 		for i := 0; i < b.N; i++ {

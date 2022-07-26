@@ -24,7 +24,7 @@ func NewNumericTrie[K NumericKey, V any]() *NumericTrie[K, V] {
 func (n *NumericTrie[K, V]) bytesFromKey(key K) []byte {
 	size := int(unsafe.Sizeof(key))
 	buff := n.keyBuff[:size]
-
+	// write most significant bit first, so need to reverse
 	raw := unsafe.Slice((*byte)(unsafe.Pointer(&key)), size)
 	size--
 	for i := range buff {

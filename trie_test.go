@@ -10,15 +10,20 @@ import (
 
 func BenchmarkInsert(b *testing.B) {
 	var buff bytes.Buffer
-	for size := range []int{1, 2, 4, 8, 16, 32} {
+	for _, size := range []int{1, 2, 4, 8} {
 		size = 1024 << size
 		b.Run(fmt.Sprintf("trie_%d", size), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x := NewTrie[int]()
+				keySize := 0
 				for y := 0; y < size; y++ {
 					fmt.Fprint(&buff, y)
+					keySize += buff.Len()
 					x.Insert(buff.Bytes(), y)
 					buff.Reset()
+				}
+				if i == 0 {
+					b.Logf("trie: %d key: %d ratio: %f", x.sizeBytes(), keySize, float64(x.sizeBytes())/float64(keySize))
 				}
 			}
 		})
