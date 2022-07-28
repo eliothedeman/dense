@@ -9,7 +9,7 @@ import (
 func TestBytesFromKey(t *testing.T) {
 	x := NewNumericTrie[int, int]()
 	for i := 0; i < 82; i++ {
-		x.Insert(i, i)
+		x.insert(i, i)
 
 	}
 	assert.Equal(t, x.MustGet(81), 81)
@@ -18,16 +18,16 @@ func TestBytesFromKey(t *testing.T) {
 func TestSingleByteKey(t *testing.T) {
 	x := NewNumericTrie[byte, int]()
 	for i := 0; i < 255; i++ {
-		x.Insert(byte(i), i)
+		x.insert(byte(i), i)
 	}
 	assert.Equal(t, 1, x.MustGet(1))
 }
 
-func BenchmarkInsertInt(b *testing.B) {
+func BenchmarkinsertInt(b *testing.B) {
 	b.Run("trie", func(b *testing.B) {
 		x := NewNumericTrie[int, int]()
 		for i := 0; i < b.N; i++ {
-			x.Insert(i, i)
+			x.insert(i, i)
 		}
 	})
 
@@ -43,7 +43,7 @@ func BenchmarkGetInt(b *testing.B) {
 	b.Run("trie", func(b *testing.B) {
 		x := NewNumericTrie[int, int]()
 		for i := 0; i < b.N; i++ {
-			x.Insert(i, i)
+			x.insert(i, i)
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

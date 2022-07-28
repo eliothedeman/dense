@@ -14,7 +14,7 @@ const rootNode = 0
 
 // cost = (sizeof(id) * nodeChildWdith) * unique_key_bytes * parts_per_key
 
-type id = uint32
+type id = uint8
 
 func init() {
 	switch nodeBitWidth {
@@ -83,7 +83,7 @@ func (t *Trie[T]) dfsNodes(f visitor[T]) bool {
 
 type Option[T any] func(t *Trie[T]) *Trie[T]
 
-func NewTrie[T any]() *Trie[T] {
+func newTrie[T any]() *Trie[T] {
 	t := &Trie[T]{}
 	t.nodes = make([]tnode[T], 0, 1024)
 	t.nodes = append(t.nodes, tnode[T]{})
@@ -108,7 +108,7 @@ func (t *Trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
 	return from + int(offset), childIndex
 }
 
-func (t *Trie[T]) Insert(key []byte, val T) {
+func (t *Trie[T]) insert(key []byte, val T) {
 	parts := id(len(key) * partsPerByte)
 	index := rootNode
 	for i := id(0); i < parts; i++ {
@@ -127,6 +127,19 @@ func (t *Trie[T]) Insert(key []byte, val T) {
 
 	n.value = val
 	n.flags |= hasValue
+}
+
+func (t *Trie[T]) createNodesTo(key []byte) {
+	parts := id(len(key) * partsPerByte)
+	index := rootNode
+	for i := id(0); i < parts; i++ {
+		tmp, childIndex := t.findNextPart(index, key, i)
+		if tmp < 1 {
+			index += int(t.addNode(index, id(childIndex)))
+			continue
+		}
+		index = tmp
+	}
 }
 
 func (t *Trie[T]) MustGet(key []byte) (val T) {

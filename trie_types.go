@@ -17,7 +17,7 @@ type NumericTrie[K NumericKey, V any] struct {
 
 func NewNumericTrie[K NumericKey, V any]() *NumericTrie[K, V] {
 	return &NumericTrie[K, V]{
-		raw: *NewTrie[V](),
+		raw: *newTrie[V](),
 	}
 }
 
@@ -33,9 +33,9 @@ func (n *NumericTrie[K, V]) bytesFromKey(key K) []byte {
 	return buff
 }
 
-func (n *NumericTrie[K, V]) Insert(key K, val V) {
+func (n *NumericTrie[K, V]) insert(key K, val V) {
 	rawKey := n.bytesFromKey(key)
-	n.raw.Insert(rawKey, val)
+	n.raw.insert(rawKey, val)
 }
 
 func (n *NumericTrie[K, V]) MustGet(key K) V {

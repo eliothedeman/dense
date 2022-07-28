@@ -8,18 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkInsert(b *testing.B) {
+func Benchmarkinsert(b *testing.B) {
 	var buff bytes.Buffer
 	for _, size := range []int{1, 2, 4, 8} {
 		size = 1024 << size
 		b.Run(fmt.Sprintf("trie_%d", size), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				x := NewTrie[int]()
+				x := newTrie[int]()
 				keySize := 0
 				for y := 0; y < size; y++ {
 					fmt.Fprint(&buff, y)
 					keySize += buff.Len()
-					x.Insert(buff.Bytes(), y)
+					x.insert(buff.Bytes(), y)
 					buff.Reset()
 				}
 				if i == 0 {
@@ -41,10 +41,10 @@ func BenchmarkInsert(b *testing.B) {
 	}
 }
 
-func TestInsertGet(t *testing.T) {
-	x := NewTrie[int]()
-	x.Insert([]byte("10"), 10)
-	x.Insert([]byte("11"), 11)
+func TestinsertGet(t *testing.T) {
+	x := newTrie[int]()
+	x.insert([]byte("10"), 10)
+	x.insert([]byte("11"), 11)
 	assert.Equal(t, x.MustGet([]byte("10")), 10)
 	assert.Equal(t, x.MustGet([]byte("11")), 11)
 	assert.Panics(t, func() {
@@ -52,7 +52,7 @@ func TestInsertGet(t *testing.T) {
 	})
 }
 
-func TestInsert(t *testing.T) {
-	x := NewTrie[int]()
-	x.Insert([]byte("4"), 10)
+func Testinsert(t *testing.T) {
+	x := newTrie[int]()
+	x.insert([]byte("4"), 10)
 }

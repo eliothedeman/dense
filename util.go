@@ -15,6 +15,10 @@ func unsafeAsString(b []byte) string {
 	return s
 }
 
+func cast[T any](v any) T {
+	return v.(T)
+}
+
 type stack[T any] struct {
 	data []T
 }

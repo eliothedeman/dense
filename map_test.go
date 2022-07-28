@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func BenchmarkMapInsert(b *testing.B) {
+func BenchmarkMapinsert(b *testing.B) {
 
 	b.Run("native_empty", func(b *testing.B) {
 		m := make(map[int]int)
@@ -19,7 +19,7 @@ func BenchmarkMapInsert(b *testing.B) {
 	b.Run("dense_empty", func(b *testing.B) {
 		m := NewMap[int, int](0)
 		for i := 0; i < b.N; i++ {
-			m.Insert(i, i)
+			m.insert(i, i)
 		}
 
 	})
@@ -34,7 +34,7 @@ func BenchmarkMapInsert(b *testing.B) {
 	b.Run("dense_prealloc", func(b *testing.B) {
 		m := NewMap[int, int](1000)
 		for i := 0; i < b.N; i++ {
-			m.Insert(i, i)
+			m.insert(i, i)
 		}
 
 	})
@@ -43,7 +43,7 @@ func BenchmarkMapInsert(b *testing.B) {
 func TestIterMap(t *testing.T) {
 	m := NewMap[int, int](0)
 	for i := 0; i < 1000; i++ {
-		m.Insert(i, i)
+		m.insert(i, i)
 	}
 	called := 0
 	m.Each(func(key, val int) {

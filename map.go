@@ -40,7 +40,7 @@ func max[T constraints.Ordered](a T, b T) T {
 	return b
 }
 
-func (m *Map[K, V]) Insert(key K, val V) {
+func (m *Map[K, V]) insert(key K, val V) {
 	m.ensureInit()
 	l := len(m.data)
 	m.data = append(m.data, val)
