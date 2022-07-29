@@ -41,7 +41,7 @@ func Benchmarkinsert(b *testing.B) {
 	}
 }
 
-func TestinsertGet(t *testing.T) {
+func TestInsertGet(t *testing.T) {
 	x := newTrie[int]()
 	x.insert([]byte("10"), 10)
 	x.insert([]byte("11"), 11)
@@ -52,7 +52,7 @@ func TestinsertGet(t *testing.T) {
 	})
 }
 
-func Testinsert(t *testing.T) {
+func TestInsert(t *testing.T) {
 	x := newTrie[int]()
 	x.insert([]byte("4"), 10)
 }

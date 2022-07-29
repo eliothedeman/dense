@@ -12,7 +12,7 @@ type NumericKey interface {
 
 type NumericTrie[K NumericKey, V any] struct {
 	keyBuff [16]byte
-	raw     Trie[V]
+	raw     trie[V]
 }
 
 func NewNumericTrie[K NumericKey, V any]() *NumericTrie[K, V] {

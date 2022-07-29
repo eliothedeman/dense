@@ -16,10 +16,11 @@ func TestBytesFromKey(t *testing.T) {
 }
 
 func TestSingleByteKey(t *testing.T) {
-	x := NewNumericTrie[byte, int]()
+	b := NewBuilder[byte, int]()
 	for i := 0; i < 255; i++ {
-		x.insert(byte(i), i)
+		b.Add(byte(i), i)
 	}
+	x := b.Build()
 	assert.Equal(t, 1, x.MustGet(1))
 }
 
@@ -41,13 +42,14 @@ func BenchmarkinsertInt(b *testing.B) {
 
 func BenchmarkGetInt(b *testing.B) {
 	b.Run("trie", func(b *testing.B) {
-		x := NewNumericTrie[int, int]()
+		x := NewBuilder[int, int]()
 		for i := 0; i < b.N; i++ {
-			x.insert(i, i)
+			x.Add(i, i)
 		}
+		y := x.Build()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = x.MustGet(i)
+			_ = y.MustGet(i)
 		}
 	})
 	b.Run("hash", func(b *testing.B) {

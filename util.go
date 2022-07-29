@@ -45,3 +45,46 @@ func (s *stack[T]) peek() T {
 func (s *stack[T]) len() int {
 	return len(s.data)
 }
+
+type keyBuilder[K Key] struct {
+	keyBuff [1024]byte
+	fn      func(key K, buff []byte) []byte
+}
+
+func newKeyBuilder[K Key]() keyBuilder[K] {
+	return keyBuilder[K]{
+		fn: getKeyFunc[K](),
+	}
+}
+
+func (k *keyBuilder[K]) key(key K) []byte {
+	return k.fn(key, k.keyBuff[:])
+}
+
+func bytesFromPOD[K Key](key K, keyBuff []byte) []byte {
+	size := int(unsafe.Sizeof(key))
+	buff := keyBuff[:size]
+	// write most significant bit first, so need to reverse
+	raw := unsafe.Slice((*byte)(unsafe.Pointer(&key)), size)
+	size--
+	for i := range buff {
+		buff[i] = raw[size-i]
+	}
+	return buff
+}
+func getKeyFunc[K Key]() func(K, []byte) []byte {
+	var k K
+	switch any(k).(type) {
+	case string:
+		return func(key K, buff []byte) []byte {
+			return buff[:copy(buff, any(key).(string))]
+		}
+	case []byte:
+		return func(key K, buff []byte) []byte {
+			return any(key).([]byte)
+		}
+	default:
+		return bytesFromPOD[K]
+	}
+
+}

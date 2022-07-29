@@ -14,7 +14,7 @@ const rootNode = 0
 
 // cost = (sizeof(id) * nodeChildWdith) * unique_key_bytes * parts_per_key
 
-type id = uint8
+type id = uint16
 
 func init() {
 	switch nodeBitWidth {
@@ -37,17 +37,30 @@ type tnode[T any] struct {
 	value    T
 }
 
+type Trie[K Key, V any] struct {
+	keyBuilder[K]
+	t trie[V]
+}
+
+func (t *Trie[K, V]) Get(key K) (V, bool) {
+	return t.t.Get(t.keyBuilder.key(key))
+}
+
+func (t *Trie[K, V]) MustGet(key K) V {
+	return t.t.MustGet(t.keyBuilder.key(key))
+}
+
 func (t *tnode[T]) hasValue() bool {
 	return t.flags&hasValue > 0
 }
 
-type Trie[T any] struct {
+type trie[T any] struct {
 	nodes []tnode[T]
 }
 
 // private
 
-func (t *Trie[T]) addNode(from int, index id) id {
+func (t *trie[T]) addNode(from int, index id) id {
 	next := len(t.nodes)
 	t.nodes = append(t.nodes, tnode[T]{})
 	offset := id(next - int(from))
@@ -57,7 +70,7 @@ func (t *Trie[T]) addNode(from int, index id) id {
 
 type visitor[T any] func(parent id, n *tnode[T]) bool
 
-func (t *Trie[T]) dfsNodes(f visitor[T]) bool {
+func (t *trie[T]) dfsNodes(f visitor[T]) bool {
 	stack := stack[pair[id, id]]{}
 	for _, c := range t.nodes[rootNode].children {
 		if c != 0 {
@@ -81,24 +94,24 @@ func (t *Trie[T]) dfsNodes(f visitor[T]) bool {
 
 // public
 
-type Option[T any] func(t *Trie[T]) *Trie[T]
+type Option[T any] func(t *trie[T]) *trie[T]
 
-func newTrie[T any]() *Trie[T] {
-	t := &Trie[T]{}
+func newTrie[T any]() *trie[T] {
+	t := &trie[T]{}
 	t.nodes = make([]tnode[T], 0, 1024)
 	t.nodes = append(t.nodes, tnode[T]{})
 	return t
 }
 
-func (t *Trie[T]) ForEach(f func([]byte, T)) {
+func (t *trie[T]) ForEach(f func([]byte, T)) {
 	// buff := make([]byte, 1024)
 }
 
-func (t *Trie[T]) sizeBytes() int {
+func (t *trie[T]) sizeBytes() int {
 	return int(unsafe.Sizeof(t.nodes[rootNode])) * len(t.nodes)
 }
 
-func (t *Trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
+func (t *trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
 	currentNode := &t.nodes[from]
 	childIndex := bitsAtDepth(key, depth)
 	offset := currentNode.children[childIndex]
@@ -108,7 +121,7 @@ func (t *Trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
 	return from + int(offset), childIndex
 }
 
-func (t *Trie[T]) insert(key []byte, val T) {
+func (t *trie[T]) insert(key []byte, val T) {
 	parts := id(len(key) * partsPerByte)
 	index := rootNode
 	for i := id(0); i < parts; i++ {
@@ -129,7 +142,7 @@ func (t *Trie[T]) insert(key []byte, val T) {
 	n.flags |= hasValue
 }
 
-func (t *Trie[T]) createNodesTo(key []byte) {
+func (t *trie[T]) createNodesTo(key []byte) {
 	parts := id(len(key) * partsPerByte)
 	index := rootNode
 	for i := id(0); i < parts; i++ {
@@ -142,7 +155,7 @@ func (t *Trie[T]) createNodesTo(key []byte) {
 	}
 }
 
-func (t *Trie[T]) MustGet(key []byte) (val T) {
+func (t *trie[T]) MustGet(key []byte) (val T) {
 	parts := id(len(key) * partsPerByte)
 	index := rootNode
 	for i := id(0); i < parts; i++ {
@@ -156,7 +169,7 @@ func (t *Trie[T]) MustGet(key []byte) (val T) {
 	return
 }
 
-func (t *Trie[T]) Get(key []byte) (val T, found bool) {
+func (t *trie[T]) Get(key []byte) (val T, found bool) {
 	parts := id(len(key) * partsPerByte)
 	index := rootNode
 	for i := id(0); i < parts; i++ {
