@@ -19,7 +19,7 @@ func Benchmarkinsert(b *testing.B) {
 				for y := 0; y < size; y++ {
 					fmt.Fprint(&buff, y)
 					keySize += buff.Len()
-					x.insert(buff.Bytes(), y)
+					x.insert(bvFromBytes(buff.Bytes()), y)
 					buff.Reset()
 				}
 				if i == 0 {
@@ -43,16 +43,16 @@ func Benchmarkinsert(b *testing.B) {
 
 func TestInsertGet(t *testing.T) {
 	x := newTrie[int]()
-	x.insert([]byte("10"), 10)
-	x.insert([]byte("11"), 11)
-	assert.Equal(t, x.MustGet([]byte("10")), 10)
-	assert.Equal(t, x.MustGet([]byte("11")), 11)
+	x.insert(bitvec("10"), 10)
+	x.insert(bitvec("11"), 11)
+	assert.Equal(t, x.MustGet(bitvec("10")), 10)
+	assert.Equal(t, x.MustGet(bitvec("11")), 11)
 	assert.Panics(t, func() {
-		x.MustGet([]byte("nope"))
+		x.MustGet(bitvec("nope"))
 	})
 }
 
 func TestInsert(t *testing.T) {
 	x := newTrie[int]()
-	x.insert([]byte("4"), 10)
+	x.insert(bitvec("4"), 10)
 }

@@ -1,6 +1,8 @@
 package dense
 
 import (
+	"bytes"
+	"log"
 	"sort"
 
 	"golang.org/x/exp/constraints"
@@ -8,7 +10,7 @@ import (
 )
 
 type builder[T any] struct {
-	pairs []pair[[]byte, T]
+	pairs []pair[bitvec, T]
 }
 
 var _ sort.Interface = &builder[any]{}
@@ -18,26 +20,27 @@ func (b *builder[T]) Len() int {
 }
 
 func (b *builder[T]) Less(i, j int) bool {
-	jn := b.pairs[j]
-	in := b.pairs[i]
-	for n, x := range in.a {
-		if n >= len(jn.a) {
-			return false
-		}
-		if jn.a[n] > x {
-			return true
-		}
-	}
-	// they are the same
-	return false
+	return 0 > bytes.Compare(b.pairs[i].a.bytes(), b.pairs[j].a.bytes())
+	// jn := b.pairs[j]
+	// in := b.pairs[i]
+	// for n, x := range in.a {
+	// 	if n >= len(jn.a) {
+	// 		return false
+	// 	}
+	// 	if jn.a[n] > x {
+	// 		return true
+	// 	}
+	// }
+	// // they are the same
+	// return false
 }
 
 func (b *builder[T]) Swap(i, j int) {
 	b.pairs[i], b.pairs[j] = b.pairs[j], b.pairs[i]
 }
 
-func (b *builder[T]) add(key []byte, val T) *builder[T] {
-	b.pairs = append(b.pairs, pair[[]byte, T]{key, val})
+func (b *builder[T]) add(key bitvec, val T) *builder[T] {
+	b.pairs = append(b.pairs, pair[bitvec, T]{key, val})
 	return b
 }
 
@@ -51,16 +54,20 @@ func (b *builder[T]) build() *trie[T] {
 		for i := range b.pairs {
 			p := &b.pairs[i]
 			if len(p.a) >= l {
+				log.Printf("%o", p.a[:l])
 				t.createNodesTo(p.a[:l])
 				keyFound = true
 			}
 		}
 		l++
 	}
+	log.Println("start")
 	for i := range b.pairs {
 		p := &b.pairs[i]
+		log.Printf("%b", p.a)
 		t.insert(p.a, p.b)
 	}
+	log.Println("end")
 
 	return t
 }

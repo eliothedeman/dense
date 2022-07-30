@@ -9,10 +9,9 @@ import (
 
 func TestKeyEncoding(t *testing.T) {
 	buff := make([]byte, 1024)
-	assert.Equal(t, getKeyFunc[int]()(10, buff), []byte{0, 0, 0, 0, 0, 0, 0, 10})
-	assert.Equal(t, getKeyFunc[string]()("a", buff), []byte{'a'})
-	assert.Equal(t, getKeyFunc[string]()("abcd", buff), []byte{'a', 'b', 'c', 'd'})
-	assert.Equal(t, getKeyFunc[[]byte]()([]byte{'b'}, buff), []byte{'b'})
-	assert.Equal(t, getKeyFunc[uint]()(math.MaxUint, buff), []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
-
+	assert.Equal(t, getKeyFunc[int]()(10, buff), bitvec{0, 0, 0, 0, 0, 0, 0, 10})
+	assert.Equal(t, getKeyFunc[string]()("a", buff), bitvec{'a'})
+	assert.Equal(t, getKeyFunc[string]()("abcd", buff), bitvec{'a', 'b', 'c', 'd'})
+	assert.Equal(t, getKeyFunc[[]byte]()([]byte{'b'}, buff), bitvec{'b'})
+	assert.Equal(t, getKeyFunc[uint]()(math.MaxUint, buff), bitvec{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
 }

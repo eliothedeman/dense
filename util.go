@@ -48,7 +48,7 @@ func (s *stack[T]) len() int {
 
 type keyBuilder[K Key] struct {
 	keyBuff [1024]byte
-	fn      func(key K, buff []byte) []byte
+	fn      func(key K, buff []byte) bitvec
 }
 
 func newKeyBuilder[K Key]() keyBuilder[K] {
@@ -57,11 +57,11 @@ func newKeyBuilder[K Key]() keyBuilder[K] {
 	}
 }
 
-func (k *keyBuilder[K]) key(key K) []byte {
+func (k *keyBuilder[K]) key(key K) bitvec {
 	return k.fn(key, k.keyBuff[:])
 }
 
-func bytesFromPOD[K Key](key K, keyBuff []byte) []byte {
+func bitvecFromPOD[K Key](key K, keyBuff []byte) bitvec {
 	size := int(unsafe.Sizeof(key))
 	buff := keyBuff[:size]
 	// write most significant bit first, so need to reverse
@@ -70,21 +70,22 @@ func bytesFromPOD[K Key](key K, keyBuff []byte) []byte {
 	for i := range buff {
 		buff[i] = raw[size-i]
 	}
-	return buff
+	return bvFromBytes(buff)
 }
-func getKeyFunc[K Key]() func(K, []byte) []byte {
+func getKeyFunc[K Key]() func(K, []byte) bitvec {
 	var k K
 	switch any(k).(type) {
 	case string:
-		return func(key K, buff []byte) []byte {
-			return buff[:copy(buff, any(key).(string))]
+		return func(key K, buff []byte) bitvec {
+			return bvFromBytes(buff[:copy(buff, any(key).(string))])
 		}
 	case []byte:
-		return func(key K, buff []byte) []byte {
-			return any(key).([]byte)
+		return func(key K, buff []byte) bitvec {
+			k := any(key).([]byte)
+			return bvFromBytes(k)
 		}
 	default:
-		return bytesFromPOD[K]
+		return bitvecFromPOD[K]
 	}
 
 }

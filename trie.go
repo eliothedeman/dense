@@ -6,10 +6,10 @@ import (
 )
 
 const all1Byte = 0b11111111
-const nodeBitWidth = 2
-const partsPerByte = 8 / nodeBitWidth
-const nodeChildWidth = 1 << nodeBitWidth
-const readMask = all1Byte >> (8 - nodeBitWidth)
+const branchFactor = 2
+const partsPerByte = 8 / branchFactor
+const nodeChildWidth = 1 << branchFactor
+const readMask = all1Byte >> (8 - branchFactor)
 const rootNode = 0
 
 // cost = (sizeof(id) * nodeChildWdith) * unique_key_bytes * parts_per_key
@@ -17,7 +17,7 @@ const rootNode = 0
 type id = uint16
 
 func init() {
-	switch nodeBitWidth {
+	switch branchFactor {
 	case 1, 2, 4, 8:
 
 	default:
@@ -68,13 +68,13 @@ func (t *trie[T]) addNode(from int, index id) id {
 	return offset
 }
 
-type visitor[T any] func(parent id, n *tnode[T]) bool
+type visitor[T any] func(parent int, n *tnode[T]) bool
 
 func (t *trie[T]) dfsNodes(f visitor[T]) bool {
-	stack := stack[pair[id, id]]{}
+	stack := stack[pair[int, int]]{}
 	for _, c := range t.nodes[rootNode].children {
 		if c != 0 {
-			stack.push(pair[id, id]{rootNode, c})
+			stack.push(pair[int, int]{rootNode, int(c)})
 		}
 	}
 	for stack.len() > 0 {
@@ -85,7 +85,7 @@ func (t *trie[T]) dfsNodes(f visitor[T]) bool {
 		}
 		for _, c := range n.children {
 			if c != 0 {
-				stack.push(pair[id, id]{args.b, c})
+				stack.push(pair[int, int]{args.b, args.b + int(c)})
 			}
 		}
 	}
@@ -111,9 +111,9 @@ func (t *trie[T]) sizeBytes() int {
 	return int(unsafe.Sizeof(t.nodes[rootNode])) * len(t.nodes)
 }
 
-func (t *trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
+func (t *trie[T]) findNextPart(from int, key bitvec, depth uint32) (int, byte) {
 	currentNode := &t.nodes[from]
-	childIndex := bitsAtDepth(key, depth)
+	childIndex := key.at(depth)
 	offset := currentNode.children[childIndex]
 	if offset == 0 {
 		return -1, childIndex
@@ -121,10 +121,10 @@ func (t *trie[T]) findNextPart(from int, key []byte, depth id) (int, byte) {
 	return from + int(offset), childIndex
 }
 
-func (t *trie[T]) insert(key []byte, val T) {
-	parts := id(len(key) * partsPerByte)
+func (t *trie[T]) insert(key bitvec, val T) {
+	parts := uint32(len(key) * partsPerByte)
 	index := rootNode
-	for i := id(0); i < parts; i++ {
+	for i := uint32(0); i < parts; i++ {
 		tmp, childIndex := t.findNextPart(index, key, i)
 		if tmp < 1 {
 			index += int(t.addNode(index, id(childIndex)))
@@ -134,7 +134,7 @@ func (t *trie[T]) insert(key []byte, val T) {
 	}
 	n := &t.nodes[index]
 
-	if n.flags&hasValue > 0 {
+	if n.hasValue() {
 		log.Fatalf("Overwriting %v with %v at key '%b'", n.value, val, key)
 	}
 
@@ -142,10 +142,10 @@ func (t *trie[T]) insert(key []byte, val T) {
 	n.flags |= hasValue
 }
 
-func (t *trie[T]) createNodesTo(key []byte) {
-	parts := id(len(key) * partsPerByte)
+func (t *trie[T]) createNodesTo(key bitvec) {
+	parts := uint32(len(key) * partsPerByte)
 	index := rootNode
-	for i := id(0); i < parts; i++ {
+	for i := uint32(0); i < parts; i++ {
 		tmp, childIndex := t.findNextPart(index, key, i)
 		if tmp < 1 {
 			index += int(t.addNode(index, id(childIndex)))
@@ -155,10 +155,10 @@ func (t *trie[T]) createNodesTo(key []byte) {
 	}
 }
 
-func (t *trie[T]) MustGet(key []byte) (val T) {
-	parts := id(len(key) * partsPerByte)
+func (t *trie[T]) MustGet(key bitvec) (val T) {
+	parts := uint32(len(key) * partsPerByte)
 	index := rootNode
-	for i := id(0); i < parts; i++ {
+	for i := uint32(0); i < parts; i++ {
 		index, _ = t.findNextPart(index, key, i)
 		if index < 1 {
 			log.Panicf("key not found %s", key)
@@ -169,10 +169,10 @@ func (t *trie[T]) MustGet(key []byte) (val T) {
 	return
 }
 
-func (t *trie[T]) Get(key []byte) (val T, found bool) {
-	parts := id(len(key) * partsPerByte)
+func (t *trie[T]) Get(key bitvec) (val T, found bool) {
+	parts := uint32(len(key) * partsPerByte)
 	index := rootNode
-	for i := id(0); i < parts; i++ {
+	for i := uint32(0); i < parts; i++ {
 		index, _ = t.findNextPart(index, key, i)
 		if index < 1 {
 			return
@@ -188,7 +188,7 @@ func (t *trie[T]) Get(key []byte) (val T, found bool) {
 
 func bitsAtDepth(data []byte, depth id) byte {
 	index := depth / partsPerByte
-	shift := nodeBitWidth * (depth % partsPerByte)
+	shift := branchFactor * (depth % partsPerByte)
 	mask := byte(readMask << shift)
 	return (data[index] & mask) >> shift
 }
